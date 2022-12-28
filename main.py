@@ -7,10 +7,12 @@ import aiofiles
 
 '''
 TODO:
-fix font
+fix font/style
+add more file types
 Download all fictions from profile
 Download all favourites from profile
 Add emailing options
+make into terminal app
 '''
 
 
