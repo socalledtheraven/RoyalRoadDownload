@@ -1,4 +1,4 @@
-import os
+from urllib.parse import urljoin
 import subprocess
 from bs4 import BeautifulSoup
 import aiohttp
@@ -14,6 +14,9 @@ Download all favourites from profile
 Add emailing options
 make into terminal app
 '''
+
+VALID_FILE_FORMATS = ["azw3", "docx", "epub", "fb2", "htmlz", "lit", "lrf", "mobi", "odt", "pdb", "pdf", "pml", "rb",
+                      "rtf", "snb", "tcr", "txt", "txtz"]
 
 
 async def get(url):
@@ -76,11 +79,36 @@ async def get_first_chapter_url(story_url):
 async def get_metadata(story_url):
     html = await get(story_url)
     soup = BeautifulSoup(html, 'html.parser')
-    author = soup.find('h4', property='author').text
+    author = soup.find('h4', property='author').text.replace("by ", "").strip()
     description = soup.find('div', class_='description').text
     cover_url = soup.find('img', class_='thumbnail inline-block')['src']
     title = soup.find('h1', property='name').text
     return [author, description, cover_url, title]
+
+
+async def get_css(url, path):
+    html = await get(url)
+    soup = BeautifulSoup(html, "html.parser")
+    css_files = []
+    for css in soup.find_all("link"):
+        if css.attrs.get("href"):
+            # if the link tag has the 'href' attribute
+            css_url = urljoin(url, css.attrs.get("href"))
+            css_files.append(css_url)
+
+    css_files = [css for css in css_files if "dist" in css or "fonts" in css]
+
+    for css in css_files:
+        if "fonts" in css:
+            file = "fonts.css"
+        else:
+            file = css.split("/")[-1].split("?")[0]
+
+        async with aiofiles.open(path+"\\"+file, "a+", encoding="utf-8") as f:
+            css_code = await get(css)
+            await f.write(css_code)
+
+    return css_files
 
 
 async def file_writer(chapter_url, file, ending):
@@ -102,7 +130,8 @@ async def get_whole_story(story_url, file_name, mode="md"):
         next_url = await get_next_chapter_url(next_url)
 
 
-async def convert_to_mobi(path, file, metadata):
+async def convert_to_mobi(path, file, metadata, css_files):
+    print("Converting to mobi")
     title, author, cover, description = metadata[3], metadata[0], metadata[2], metadata[1]
     subprocess.run(["C:\\Program Files\\Calibre2\\ebook-convert.exe",
                     path+"\\"+file+".html",
@@ -110,7 +139,8 @@ async def convert_to_mobi(path, file, metadata):
                     "--title="+title,
                     "--authors="+author,
                     "--cover="+cover,
-                    "--comments="+description
+                    "--comments="+description,
+                    "--extra-css="+path+"\\"+css_files[0],
                     ],
                    shell=True)
 
@@ -119,11 +149,11 @@ async def main(story_url, path):
     # await get_whole_story(story_url, path, mode="mobi")
     p = path.split("\\")
     path, file = "\\".join(p[:-1]), p[-1]
-    await convert_to_mobi(path, file, metadata=await get_metadata(story_url))
+    await convert_to_mobi(path, file, metadata=await get_metadata(story_url), css_files=await get_css(story_url, path))
 
 
 asyncio.run(main(
     "https://www.royalroad.com/fiction/54810/system-error-litrpg-reincarnation-ft-copious-amounts",
-    "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\blue_boxes"
-))
+    "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\blue_boxes\\blue_boxes"
+    ))
 
