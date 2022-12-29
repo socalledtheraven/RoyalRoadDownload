@@ -80,7 +80,7 @@ async def get_metadata(story_url):
     html = await get(story_url)
     soup = BeautifulSoup(html, 'html.parser')
     author = soup.find('h4', property='author').text.replace("by ", "").strip()
-    description = soup.find('div', class_='description').text
+    description = soup.find('div', class_='description').text.replace("\n", " ").strip()
     cover_url = soup.find('img', class_='thumbnail inline-block')['src']
     title = soup.find('h1', property='name').text
     return [author, description, cover_url, title]
@@ -90,25 +90,22 @@ async def get_css(url, path):
     html = await get(url)
     soup = BeautifulSoup(html, "html.parser")
     css_files = []
-    for css in soup.find_all("link"):
-        if css.attrs.get("href"):
-            # if the link tag has the 'href' attribute
-            css_url = urljoin(url, css.attrs.get("href"))
-            css_files.append(css_url)
+    for css in soup.find_all("link", rel="stylesheet"):
+        css_files.append("https://www.royalroad.com/"+css["href"])
 
-    css_files = [css for css in css_files if "dist" in css or "fonts" in css]
-
+    css_code_files = []
     for css in css_files:
         if "fonts" in css:
             file = "fonts.css"
         else:
             file = css.split("/")[-1].split("?")[0]
+        css_code_files.append(file)
 
         async with aiofiles.open(path+"\\"+file, "a+", encoding="utf-8") as f:
             css_code = await get(css)
             await f.write(css_code)
 
-    return css_files
+    return css_code_files
 
 
 async def file_writer(chapter_url, file, ending):
@@ -140,7 +137,6 @@ async def convert_to_mobi(path, file, metadata, css_files):
                     "--authors="+author,
                     "--cover="+cover,
                     "--comments="+description,
-                    "--extra-css="+path+"\\"+css_files[0],
                     ],
                    shell=True)
 
