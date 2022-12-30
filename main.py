@@ -6,8 +6,9 @@ import aiofiles
 
 '''
 TODO:
-Download all fictions from profile
-Download all favourites from profile
+handle cover
+fix table of contents
+fix A/Ns
 Add emailing options
 make into terminal app
 '''
@@ -20,6 +21,42 @@ async def get(url):
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             return await response.text()
+
+
+async def get_fictions_from_profile(profile_url):
+    html = await get(profile_url+"/fictions")
+    soup = BeautifulSoup(html, 'html.parser')
+    fictions = soup.find_all('a', class_='btn btn-default btn-outline')
+    fiction_links = []
+    for fiction in fictions:
+        print(fiction["href"])
+        fiction_links.append(fiction["href"])
+    return fiction_links
+
+
+async def get_favourites_from_profile(profile_url):
+    html = await get(profile_url + "/favorites")
+    soup = BeautifulSoup(html, 'html.parser')
+    fictions = soup.find_all('a', class_='btn btn-default btn-outline')
+    fiction_links = []
+    for fiction in fictions:
+        fiction_links.append("https://www.royalroad.com"+fiction["href"])
+    return fiction_links
+
+
+async def mass_download_fictions(mode, file_formats, paths, fictions=[], profile=""):
+    fiction_links = fictions
+    if mode == "favourites":
+        fiction_links = await get_favourites_from_profile(profile)
+    elif mode == "fictions":
+        fiction_links = await get_fictions_from_profile(profile)
+
+    for i in range(len(fiction_links)):
+        if type(file_formats) != list:
+            if type(paths) != list:
+                await download_story(fiction_links[i], paths, file_formats)
+            else:
+                await download_story(fiction_links[i], paths[i], file_formats)
 
 
 async def get_chapter_text(chapter_url):
@@ -78,7 +115,7 @@ async def get_metadata(story_url):
     soup = BeautifulSoup(html, 'html.parser')
     author = soup.find('h4', property='author').text.replace("by ", "").strip()
     description = soup.find('div', class_='description').text.replace("\n", " ").strip()
-    cover_url = soup.find('img', class_='thumbnail inline-block')['src']
+    cover_url = soup.find('img', class_='thumbnail inline-block')["src"]
     title = soup.find('h1', property='name').text
     return [author, description, cover_url, title]
 
@@ -141,15 +178,28 @@ async def convert_to_file(path, file, format, metadata):
                        shell=True)
 
 
-async def main(story_url, path, format):
+async def download_story(story_url, path, format):
+    print(f"Downloading story: {story_url}")
     await get_whole_story(story_url, path, mode="ebook")
     p = path.split("\\")
     path, file = "\\".join(p[:-1]), p[-1]
     await convert_to_file(path, file, format, metadata=await get_metadata(story_url))
 
 
-asyncio.run(main(
-    "https://www.royalroad.com/fiction/54810/system-error-litrpg-reincarnation-ft-copious-amounts",
-    "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\blue_boxes\\blue_boxes",
-    "azw3"
+async def email(path, email):
+    pass
+
+
+async def test(story_url):
+    html = await get(story_url)
+    soup = BeautifulSoup(html, 'html.parser')
+    author = soup.find('h4', property='author').text.replace("by ", "").strip()
+    description = soup.find('div', class_='description').text.replace("\n", " ").strip()
+    cover_url = soup.find('img', class_='thumbnail inline-block')["src"]
+
+
+asyncio.run(download_story(
+    "https://www.royalroad.com/fiction/25082/blue-core",
+    "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\bluecore\\blue_core",
+    "mobi"
 ))
