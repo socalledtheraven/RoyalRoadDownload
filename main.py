@@ -1,4 +1,3 @@
-from urllib.parse import urljoin
 import subprocess
 from bs4 import BeautifulSoup
 import aiohttp
@@ -7,8 +6,6 @@ import aiofiles
 
 '''
 TODO:
-fix font/style
-add more file types
 Download all fictions from profile
 Download all favourites from profile
 Add emailing options
@@ -122,34 +119,37 @@ async def get_whole_story(story_url, file_name, mode="md"):
     while next_url is not None:
         if mode == "md":
             await file_writer(next_url, file_name, ".md")
-        elif mode == "mobi":
+        elif mode == "ebook":
             await file_writer(next_url, file_name, ".html")
         next_url = await get_next_chapter_url(next_url)
 
 
-async def convert_to_mobi(path, file, metadata, css_files):
-    print("Converting to mobi")
-    title, author, cover, description = metadata[3], metadata[0], metadata[2], metadata[1]
-    subprocess.run(["C:\\Program Files\\Calibre2\\ebook-convert.exe",
-                    path+"\\"+file+".html",
-                    path+"\\"+file+".mobi",
-                    "--title="+title,
-                    "--authors="+author,
-                    "--cover="+cover,
-                    "--comments="+description,
-                    ],
-                   shell=True)
+async def convert_to_file(path, file, format, metadata):
+    if format not in VALID_FILE_FORMATS:
+        print("Invalid file format")
+    else:
+        print(f"Converting to .{format}")
+        author, description, cover, title = metadata
+        subprocess.run(["C:\\Program Files\\Calibre2\\ebook-convert.exe",
+                        path+"\\"+file+".html",
+                        path+"\\"+file+"."+format,
+                        "--title="+title,
+                        "--authors="+author,
+                        "--cover="+cover,
+                        "--comments="+description,
+                        ],
+                       shell=True)
 
 
-async def main(story_url, path):
-    # await get_whole_story(story_url, path, mode="mobi")
+async def main(story_url, path, format):
+    await get_whole_story(story_url, path, mode="ebook")
     p = path.split("\\")
     path, file = "\\".join(p[:-1]), p[-1]
-    await convert_to_mobi(path, file, metadata=await get_metadata(story_url), css_files=await get_css(story_url, path))
+    await convert_to_file(path, file, format, metadata=await get_metadata(story_url))
 
 
 asyncio.run(main(
     "https://www.royalroad.com/fiction/54810/system-error-litrpg-reincarnation-ft-copious-amounts",
-    "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\blue_boxes\\blue_boxes"
-    ))
-
+    "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\blue_boxes\\blue_boxes",
+    "azw3"
+))
