@@ -7,8 +7,6 @@ import aiofiles
 
 '''
 TODO:
-handle cover
-fix table of contents
 fix A/Ns
 Add emailing options
 make into terminal app
@@ -182,7 +180,7 @@ async def convert_to_file(path, file, format, metadata):
 
 async def download_story(story_url, path, file, format):
     print(f"Downloading story: {story_url}")
-    await get_whole_story(story_url, path, mode="ebook")
+    await get_whole_story(story_url, path+"\\"+file, mode="ebook")
     await convert_to_file(path, file, format, metadata=await get_metadata(story_url))
 
 
@@ -197,8 +195,6 @@ async def test(story_url):
     # description = soup.find('div', class_='description').text.replace("\n", " ").strip()
     # cover_url = soup.find('img', class_='thumbnail inline-block')["src"].split("?")[0]
     await download_story(story_url, "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\bluecore", "blue_core", "mobi")
-    await convert_to_file("C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\bluecore", "blue_core", "mobi", metadata=await get_metadata(story_url))
-
 
 asyncio.run(test(
     "https://www.royalroad.com/fiction/25082/blue-core",
