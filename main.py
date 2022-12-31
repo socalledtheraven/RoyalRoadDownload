@@ -7,7 +7,6 @@ import aiofiles.os
 
 '''
 TODO:
-fix A/Ns
 Add emailing options
 make into terminal app
 '''
@@ -82,8 +81,8 @@ async def get_chapter_text(chapter_url, keep_notes):
                 notes = ""
                 note = ""
             elif len(notes) < 2:
-                note = str(notes[0]).replace('<div class="spoiler" data-class="spoiler" data-caption="Spoiler">',
-                                             "<b>Spoiler:</b><hr><br>")
+                note = str(notes[0]).replace('<div class="spoiler-new" data-caption="Spoiler" data-class="spoiler">',
+                                             "<b>Spoiler:</b><hr>")
                 note = note.replace('<td style="width: 98.6971%">',
                                     '<td style="width: 98.6971%; background-color: #00436e">')
                 note = note.replace('<td style="width: 98.4211%">',
@@ -93,8 +92,8 @@ async def get_chapter_text(chapter_url, keep_notes):
             else:
                 for i in range(len(notes)):
                     notes[i] = str(notes[i]).replace(
-                        '<div class="spoiler" data-class="spoiler" data-caption="Spoiler">',
-                        "<b>Spoiler:</b><hr><br>")
+                        '<div class="spoiler-new" data-caption="Spoiler" data-class="spoiler">',
+                        "<b>Spoiler:</b><hr>").replace("</div>", "<hr>")
                     notes[i] = notes[i].replace('<td style="width: 98.6971%">',
                                                 '<td style="width: 98.6971%; background-color: #00436e">')
                     notes[i] = notes[i].replace('<td style="width: 98.4211%">',
@@ -107,7 +106,7 @@ async def get_chapter_text(chapter_url, keep_notes):
             notes = ""
     
     text = str(soup.find_all("div", class_="chapter-inner chapter-content")[0])
-    text = text.replace('<div class="spoiler" data-class="spoiler" data-caption="Spoiler">', ">! ")
+    text = text.replace('<div class="spoiler-new" data-caption="Spoiler" data-class="spoiler">', "<b>Spoiler:</b><hr>").replace("</div>", "<hr>")
     text = text.replace("<p> </p>", "")
     text = text.replace('<td style="width: 99.1477%">', '<td style="width: 98.1477%; background-color: #00436e">')
     text = text.replace('<td style="width: 99.1477%; text-align: center">',
