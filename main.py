@@ -1,3 +1,4 @@
+import os
 import subprocess
 from bs4 import BeautifulSoup
 import aiohttp
@@ -44,7 +45,7 @@ async def get_favourites_from_profile(profile_url):
     return fiction_links
 
 
-async def mass_download_fictions(mode, file_formats, paths, fictions=[], profile=""):
+async def mass_download_fictions(mode, file_formats, paths, files, fictions=[], profile=""):
     fiction_links = fictions
     if mode == "favourites":
         fiction_links = await get_favourites_from_profile(profile)
@@ -54,9 +55,9 @@ async def mass_download_fictions(mode, file_formats, paths, fictions=[], profile
     for i in range(len(fiction_links)):
         if type(file_formats) != list:
             if type(paths) != list:
-                await download_story(fiction_links[i], paths, file_formats)
+                await download_story(fiction_links[i], paths, files, file_formats)
             else:
-                await download_story(fiction_links[i], paths[i], file_formats)
+                await download_story(fiction_links[i], paths[i], files[i], file_formats)
 
 
 async def get_chapter_text(chapter_url):
@@ -64,7 +65,7 @@ async def get_chapter_text(chapter_url):
     soup = BeautifulSoup(html, 'html.parser')
     title = soup.find('h1', class_='font-white', style='margin-top: 10px')
     print(title.text)
-    title = str(title)
+    title = str(title).replace('<h1 class="font-white"', '<h1 class="chapter"')
     note = soup.find('div', class_='portlet-body author-note')
     if note is not None:
         note = str(note).replace('<div class="spoiler" data-class="spoiler" data-caption="Spoiler">', ">! ")
@@ -113,9 +114,9 @@ async def get_first_chapter_url(story_url):
 async def get_metadata(story_url):
     html = await get(story_url)
     soup = BeautifulSoup(html, 'html.parser')
-    author = soup.find('h4', property='author').text.replace("by ", "").strip()
+    author = soup.find('h4', property='author').text.replace("by ", "").strip().split("\n")[0]
     description = soup.find('div', class_='description').text.replace("\n", " ").strip()
-    cover_url = soup.find('img', class_='thumbnail inline-block')["src"]
+    cover_url = soup.find('img', class_='thumbnail inline-block')["src"].split("?")[0]
     title = soup.find('h1', property='name').text
     return [author, description, cover_url, title]
 
@@ -171,18 +172,17 @@ async def convert_to_file(path, file, format, metadata):
                         path+"\\"+file+".html",
                         path+"\\"+file+"."+format,
                         "--title="+title,
+                        '--cover='+cover,
+                        '--remove-first-image',
+                        '--comments="'+description+'"',
                         "--authors="+author,
-                        "--cover="+cover,
-                        "--comments="+description,
                         ],
                        shell=True)
 
 
-async def download_story(story_url, path, format):
+async def download_story(story_url, path, file, format):
     print(f"Downloading story: {story_url}")
     await get_whole_story(story_url, path, mode="ebook")
-    p = path.split("\\")
-    path, file = "\\".join(p[:-1]), p[-1]
     await convert_to_file(path, file, format, metadata=await get_metadata(story_url))
 
 
@@ -191,15 +191,15 @@ async def email(path, email):
 
 
 async def test(story_url):
-    html = await get(story_url)
-    soup = BeautifulSoup(html, 'html.parser')
-    author = soup.find('h4', property='author').text.replace("by ", "").strip()
-    description = soup.find('div', class_='description').text.replace("\n", " ").strip()
-    cover_url = soup.find('img', class_='thumbnail inline-block')["src"]
+    # html = await get(story_url)
+    # soup = BeautifulSoup(html, 'html.parser')
+    # author = soup.find('h4', property='author').text.replace("by ", "").strip()
+    # description = soup.find('div', class_='description').text.replace("\n", " ").strip()
+    # cover_url = soup.find('img', class_='thumbnail inline-block')["src"].split("?")[0]
+    await download_story(story_url, "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\bluecore", "blue_core", "mobi")
+    await convert_to_file("C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\bluecore", "blue_core", "mobi", metadata=await get_metadata(story_url))
 
 
-asyncio.run(download_story(
+asyncio.run(test(
     "https://www.royalroad.com/fiction/25082/blue-core",
-    "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\bluecore\\blue_core",
-    "mobi"
 ))
