@@ -1,3 +1,5 @@
+import os
+from dotenv import load_dotenv
 import subprocess
 from bs4 import BeautifulSoup
 import aiohttp
@@ -11,9 +13,9 @@ Add emailing options
 make into terminal app
 '''
 
+EMAIL, PATH = load_dotenv()
 VALID_FILE_FORMATS = ["azw3", "docx", "epub", "fb2", "htmlz", "lit", "lrf", "mobi", "odt", "pdb", "pdf", "pml", "rb",
                       "rtf", "snb", "tcr", "txt", "txtz"]
-PATH = "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\bluecore"
 
 
 async def get(url):
@@ -114,11 +116,11 @@ async def get_chapter_text(chapter_url, keep_notes):
     text = text.replace('<td style="width: 98.6971%">', '<td style="width: 98.6971%; background-color: #00436e">')
     
     if keep_notes and type(notes) == list and notes != []:
-        return text, notes, title
+        return [notes, title, text]
     elif keep_notes and type(notes) != list:
-        return text, note, title
+        return [note, title, text]
     else:
-        return text, title
+        return [title, text]
 
 
 async def get_chapter_html(chapter_url):
@@ -184,12 +186,10 @@ async def get_css(url, path):
 
 async def file_writer(chapter_url, file, ending, keep_notes):
     async with aiofiles.open(file + ending, "a+", encoding="utf-8") as f:
-        text, note, title = await get_chapter_text(chapter_url, keep_notes)
-        await f.write(title)
-        if note is not None:
-            await f.write(note)
-        await f.write(text)
-
+        contents = await get_chapter_text(chapter_url, keep_notes)
+        for content in contents:
+            await f.write(content)
+        
 
 async def get_whole_story(story_url, file_name, mode="md", keep_notes=False):
     next_url = await get_first_chapter_url(story_url)
@@ -224,18 +224,18 @@ async def download_story(story_url, path, file, format, keep_notes=False):
     print(f"Downloading story: {story_url}")
     await get_whole_story(story_url, path + "\\" + file, mode="ebook", keep_notes=keep_notes)
     await convert_to_file(path, file, format, metadata=await get_metadata(story_url))
-    # await aiofiles.os.remove(path+"\\"+file+".html")
+    await aiofiles.os.remove(path+"\\"+file+".html")
     # uncomment that for the final version
 
 
-async def email(path, email):
+async def email(message, attachment, email):
     pass
 
 
-async def test(story_url, keep_notes=True):
-    text, note, title = await get_chapter_text(story_url, keep_notes)
-    print(title+note+text)
+async def test(story_url, keep_notes=False):
+    # await download_story(story_url, "C:\\Users\\Tom-User\\Downloads\\Royal_road_downloads\\bluecore", "blue_core", "mobi", keep_notes=keep_notes)
+    pass
 
 asyncio.run(test(
-    "https://www.royalroad.com/fiction/37438/hellprinces-salvos-a-monster-evolution-litrpg/chapter/662170/art-gallery",
+    "https://www.royalroad.com/fiction/25082/blue-core",
 ))
